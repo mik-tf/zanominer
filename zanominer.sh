@@ -12,7 +12,9 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration Variables
-ZANO_VERSION="1.5.0.143"
+ZANO_PREFIX_URL="https://build.zano.org/builds/"
+ZANO_IMAGE_FILENAME="zano-linux-x64-develop-v2.0.1.367[d63feec].AppImage"
+ZANO_URL=${ZANO_PREFIX_URL}${ZANO_IMAGE_FILENAME}
 TT_MINER_VERSION="2023.1.0"
 STRATUM_PORT="11555"
 POS_RPC_PORT="50005"
@@ -58,22 +60,36 @@ install_dependencies() {
 
 # Download Zano components
 download_zano_components() {
-    log "Downloading Zano components..."
+    log "Starting download of Zano components..."
     
     # Create Zano directory
     mkdir -p ~/zano-project
     cd ~/zano-project
 
-    # Download Zano CLI Wallet
-    wget https://github.com/zano-project/zano/releases/download/v${ZANO_VERSION}/zano-linux-x64-v${ZANO_VERSION}.tar.bz2
-    
     # Verify download
-    if [ ! -f zano-linux-x64-v${ZANO_VERSION}.tar.bz2 ]; then
+    if [ ! -f ${ZANO_IMAGE_FILENAME} ]; then
+	    # Download Zano CLI Wallet
+	    log "Downloading Zano CLI Wallet..."
+	    wget $ZANO_URL
+    fi
+   
+    # Verify download
+    if [ ! -f ${ZANO_IMAGE_FILENAME} ]; then
         error "Failed to download Zano CLI Wallet"
     fi
 
+    log "Zano CLI Wallet file has been downloaded..."
+
     # Extract
-    tar -xvjf zano-linux-x64-v${ZANO_VERSION}.tar.bz2
+    chmod +x $ZANO_IMAGE_FILENAME
+    
+    ./$ZANO_IMAGE_FILENAME --appimage-extract
+    
+    mv ~/zano-project/squashfs-root/usr/bin/simplewallet ~/zano-project/
+    mv ~/zano-project/squashfs-root/usr/bin/zanod ~/zano-project/
+    
+    rm -r ~/zano-project/squashfs-root
+    
 }
 
 # Generate wallet with interactive prompts
@@ -90,7 +106,7 @@ create_zano_wallet() {
     log "Generating wallet: ${WALLET_NAME}.wallet"
     
     # Navigate to Zano directory
-    cd ~/zano-project/zano-linux-x64-v${ZANO_VERSION}
+    cd ~/zano-project
 
     # Start daemon in background
     log "Starting Zano daemon to sync blockchain..."
@@ -101,10 +117,7 @@ create_zano_wallet() {
     sleep 30
 
     # Create wallet (non-interactive)
-    ./simplewallet --generate-new-wallet=${WALLET_NAME}.wallet <<EOF
-${WALLET_PASSWORD}
-${WALLET_PASSWORD}
-EOF
+    ./simplewallet --generate-new-wallet=${WALLET_NAME}.wallet
 
     # Open wallet to show address
     WALLET_ADDRESS=$(./simplewallet --wallet-file=${WALLET_NAME}.wallet <<EOF
