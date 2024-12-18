@@ -109,15 +109,17 @@ create_zano_wallet() {
     cd ~/zano-project
 
     # Start daemon in background
-    log "Starting Zano daemon to sync blockchain..."
-    ./zanod &
+    log "Starting Zano daemon in background to sync blockchain..."
+    ./zanod > zanod_output.log 2>&1 &
     ZANOD_PID=$!
 
     # Wait for daemon to start
     sleep 30
 
     # Create wallet (non-interactive)
-    ./simplewallet --generate-new-wallet=${WALLET_NAME}.wallet
+    ./simplewallet --generate-new-wallet=${WALLET_NAME}.wallet <<EOF
+${WALLET_PASSWORD}
+EOF
 
     # Open wallet to show address
     WALLET_ADDRESS=$(./simplewallet --wallet-file=${WALLET_NAME}.wallet <<EOF
@@ -128,7 +130,7 @@ EOF
 )
 
     # Extract wallet address (assuming last line is the address)
-    WALLET_ADDRESS=$(echo "$WALLET_ADDRESS" | grep -oP 'Zx[a-zA-Z0-9]+')
+    WALLET_ADDRESS=$(echo "$WALLET_ADDRESS" | grep -oP 'Zx[a-zA-Z0-9]+' | head -n 1)
 
     log "Wallet created successfully!"
     echo -e "${BLUE}Wallet Address: ${WALLET_ADDRESS}${NC}"
@@ -163,8 +165,13 @@ setup_tt_miner() {
     
     cd ~/zano-project
 
+    # Verify download
+    if [ ! -f TT-Miner-${TT_MINER_VERSION}.tar.gz ]; then
+        log "Downloading Miner"
+        wget https://github.com/TrailingStop/TT-Miner-release/releases/download/${TT_MINER_VERSION}/TT-Miner-${TT_MINER_VERSION}.tar.gz
+    fi
+
     # Download TT-Miner
-    wget https://github.com/TrailingStop/TT-Miner-release/releases/download/${TT_MINER_VERSION}/TT-Miner-${TT_MINER_VERSION}.tar.gz
     tar -xf TT-Miner-${TT_MINER_VERSION}.tar.gz
     chmod +x TT-Miner
 }
@@ -229,8 +236,8 @@ Requires=zanod.service
 [Service]
 Type=simple
 User=${USER}
-WorkingDirectory=~/zano-project/zano-linux-x64-v${ZANO_VERSION}
-ExecStart=~/zano-project/zano-linux-x64-v${ZANO_VERSION}/simplewallet \
+WorkingDirectory=~/zano-project
+ExecStart=~/zano-project/simplewallet \
     --wallet-file=${WALLET_NAME}.wallet \
     --rpc-bind-port=${POS_RPC_PORT} \
     --do-pos-mining \
