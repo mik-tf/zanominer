@@ -82,7 +82,7 @@ This bash script provides a comprehensive, automated setup for Zano blockchain e
 
 ## Security Considerations
 
-- Wallet details are saved in `~/zano-wallet-backup/wallet-details.txt`
+- Wallet details are saved in `~/zano-project/wallet-details.txt`
 - File permissions are restricted
 - Wallet password stored securely for PoS mining
 
