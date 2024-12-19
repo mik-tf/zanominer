@@ -230,13 +230,23 @@ install_dependencies() {
 
     # Check for NVIDIA GPU
     if lspci | grep -i nvidia > /dev/null; then
-        log "NVIDIA GPU detected. Installing NVIDIA drivers and CUDA..."
+        log "NVIDIA GPU detected. Checking NVIDIA drivers and CUDA..."
         
-        # Install NVIDIA drivers
-        sudo ubuntu-drivers autoinstall
+        # Check if NVIDIA drivers are installed
+        if ! nvidia-smi &>/dev/null; then
+            log "Installing NVIDIA drivers..."
+            sudo ubuntu-drivers autoinstall
+        else
+            log "NVIDIA drivers are already installed: $(nvidia-smi --query-gpu=driver_version --format=csv,noheader)"
+        fi
         
-        # Install CUDA toolkit
-        sudo apt install -y nvidia-cuda-toolkit
+        # Check if CUDA toolkit is installed
+        if ! command -v nvcc &>/dev/null; then
+            log "Installing CUDA toolkit..."
+            sudo apt install -y nvidia-cuda-toolkit
+        else
+            log "CUDA toolkit is already installed: $(nvcc --version | head -n1)"
+        fi
         
         # Verify CUDA installation
         if ! command -v nvcc &> /dev/null; then
@@ -442,8 +452,17 @@ After=network.target
 Type=simple
 User=${USER}
 WorkingDirectory=${ZANO_DIR}
-ExecStart=${ZANO_DIR}/zanod --stratum --stratum-miner-address=${WALLET_ADDRESS} --stratum-bind-port=${STRATUM_PORT}
-Restart=on-failure
+ExecStart=${ZANO_DIR}/zanod \
+    --stratum \
+    --stratum-miner-address=${WALLET_ADDRESS} \
+    --stratum-bind-port=${STRATUM_PORT} \
+    --no-console \
+    --disable-stop-if-time-out-of-sync
+StandardInput=null
+StandardOutput=append:/var/log/zanod.log
+StandardError=append:/var/log/zanod.error.log
+Restart=always
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
