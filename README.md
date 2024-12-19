@@ -23,98 +23,115 @@
 
 ## Introduction
 
-This bash script provides a comprehensive, automated setup for Zano blockchain enthusiasts, enabling easy installation of:
-- Zano CLI Wallet
-- GPU Mining
-- Proof of Stake (PoS) Staking
-- Systemd Services for automated management
-
-## Prerequisites
-
-- Ubuntu Desktop (recommended version 22.04 LTS or later)
-- NVIDIA GPU with CUDA support
-- Sudo access
-- Basic terminal familiarity
+A comprehensive setup script for Zano wallet, mining, and staking on Ubuntu with NVIDIA GPUs. This script automates the entire process of setting up a Zano node including wallet creation, GPU mining, and PoS staking.
 
 ## Features
 
-- 🔒 Secure wallet creation
-- 💻 Automatic dependency installation
-- ⛏️ GPU mining setup with TT-Miner
-- 💰 Proof of Stake mining configuration
-- 🚀 Systemd services for seamless background operation
+- Full Zano node setup
+- Automatic wallet creation with secure password management
+- GPU mining configuration with TT-Miner
+- Proof of Stake (PoS) mining setup
+- Systemd service integration
+- Installation in system path for easy access
+- Service management commands
 
-## Versions Included
+## Requirements
 
-- Zano CLI Wallet: v1.5.0.143
-- TT-Miner: 2023.1.0
+- Ubuntu Desktop 24.04
+- NVIDIA GPU
+- Sudo privileges
+- Internet connection
 
-## Installation Steps
+## Installation
 
-1. **Run the Script**
-   ```bash
-   bash zano_setup.sh
-   ```
+```bash
+# Download the script
+wget https://raw.githubusercontent.com/Mik-TF/zanominer/main/zanominer.sh
 
-2. **Follow Interactive Prompts**
-   - Choose wallet name
-   - Optional: Configure separate mining reward address
-   - Decide on service startup
+# Install in system path
+bash zanominer.sh install
+```
 
-## What the Script Does
+## Set Up the Miner
 
-### Dependencies
-- Installs required system packages
-- Sets up NVIDIA CUDA toolkit
-- Installs NVIDIA drivers
+```bash
+# Build the miner setup
+zanominer build
+```
 
-### Wallet Creation
-- Generates a new Zano wallet
-- Creates secure, randomized passwords
-- Saves wallet details in a secure backup location
+## Usage
 
-### Mining & Staking Setup
-- Downloads and configures TT-Miner
-- Sets up systemd services for:
-  - Zano Blockchain Daemon
-  - GPU Mining
-  - Proof of Stake Mining
+```bash
+zanominer [COMMAND]
+```
 
-## Security Considerations
+### Available Commands
+
+- `install` - Install the script in system path
+- `uninstall` - Remove the script from system path
+- `build` - Run full installation and setup
+- `show_services` - Display status of all Zano services
+- `start` - Start all Zano services
+- `stop` - Stop all Zano services
+- `restart` - Restart all Zano services
+- `help` - Show help message
+
+### Examples
+
+```bash
+# Check services status
+zanominer show_services
+
+# Remove script from path
+zanominer uninstall
+```
+
+## Service Management
+
+The script creates and manages three systemd services:
+1. `zanod.service` - Zano blockchain daemon
+2. `tt-miner.service` - GPU mining service
+3. `zano-pos-mining.service` - PoS staking service
+
+### Control Services
+
+```bash
+zanominer start    # Start all services
+zanominer stop     # Stop all services
+zanominer restart  # Restart all services
+```
+
+## Security
 
 - Wallet details are saved in `~/zano-project/wallet-details.txt`
-- File permissions are restricted
-- Wallet password stored securely for PoS mining
+- File permissions are set to 600 (user read/write only)
+- Passwords are stored securely
+- Service files use appropriate permissions
 
-## Systemd Services
+## Important Notes
 
-- `zanod.service`: Zano Blockchain Daemon
-- `tt-miner.service`: GPU Mining
-- `zano-pos-mining.service`: Proof of Stake Mining
-
-## Post-Installation
-
-- Transfer ZANO to your wallet to start staking
-- Securely backup your wallet details file
-- Monitor services using `systemctl status <service-name>`
+- Backup your wallet details file immediately after creation
+- Transfer ZANO to your wallet to begin staking
+- Monitor mining and staking progress through service logs
+- Keep your system updated and secured
 
 ## Troubleshooting
 
-- Ensure NVIDIA drivers are compatible
-- Check system logs: `journalctl -u zanod.service`
-- Verify wallet synchronization
-- Confirm mining and staking connectivity
-
-## Disclaimer
-
-- Use at your own risk
-- Always backup wallet information
-- This script is community-supported
-
-## Contributions
-
-Contributions, issues, and feature requests are welcome!
+If you encounter issues:
+1. Check service status: `zanominer services`
+2. View service logs: `journalctl -u [service-name]`
+3. Ensure NVIDIA drivers are properly installed
+4. Verify wallet is properly funded for staking
 
 ## License
 
-This work is under the [Apache 2.0 license](./LICENSE).
+Apache License 2.0
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Support
+
+For issues, questions, or contributions, please visit:
+[GitHub Repository](https://github.com/Mik-TF/zanominer)

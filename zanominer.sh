@@ -34,15 +34,15 @@ show_help() {
     echo -e "${GREEN}  uninstall${NC}     - Uninstall the script in path"
     echo -e "${GREEN}  help${NC}          - Show this help message"
     echo -e "${GREEN}  build${NC}         - Run full installation and setup"
-    echo -e "${GREEN}  show_services${NC} - Show status of all Zano services"
+    echo -e "${GREEN}  services${NC}      - Show status of all Zano services"
     echo -e "${GREEN}  start${NC}         - Start all Zano services"
     echo -e "${GREEN}  stop${NC}          - Stop all Zano services"
     echo -e "${GREEN}  restart${NC}       - Restart all Zano services"
     echo -e "${GREEN}  help${NC}          - Show this help message"
     echo
     echo "Examples:"
-    echo "  bash zanominer.sh build          # Run full installation"
-    echo "  bash zanominer.sh show_services  # Check services status"
+    echo "  bash zanominer.sh build     # Run full installation"
+    echo "  bash zanominer.sh services  # Check services status"
     echo
     echo "Requirements:"
     echo "- Ubuntu Desktop 24.04"
@@ -66,7 +66,7 @@ handle_command() {
             main
             exit 0
             ;;
-        show_services)
+        services)
             check_services_status
             exit 0
             ;;
