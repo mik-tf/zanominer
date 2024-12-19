@@ -285,6 +285,11 @@ download_zano_components() {
     cd "$ZANO_DIR" || error "Failed to change to Zano directory"
     log "All files will be stored in ${ZANO_DIR}"
 
+    if [ -f "$ZANO_DIR/simplewallet" ] && [ -f "$ZANO_DIR/zanod" ]; then
+        log "Zano components already present, skipping download and extraction..."
+        return
+    fi
+
     # Verify download
     if [ ! -f ${ZANO_IMAGE_FILENAME} ]; then
         log "Downloading Zano CLI Wallet..."
