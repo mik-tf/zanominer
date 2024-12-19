@@ -76,6 +76,26 @@ install_dependencies() {
     # Update package lists
     sudo apt update
 
+    # Check for NVIDIA GPU
+    if lspci | grep -i nvidia > /dev/null; then
+        log "NVIDIA GPU detected. Installing NVIDIA drivers and CUDA..."
+        
+        # Install NVIDIA drivers
+        sudo ubuntu-drivers autoinstall
+        
+        # Install CUDA toolkit
+        sudo apt install -y nvidia-cuda-toolkit
+        
+        # Verify CUDA installation
+        if ! command -v nvcc &> /dev/null; then
+            warn "CUDA installation might have failed. Please check manually."
+        else
+            log "CUDA installation verified: $(nvcc --version | head -n1)"
+        fi
+    else
+        warn "No NVIDIA GPU detected. Mining performance may be limited."
+    fi
+
     # Install essential dependencies
     sudo apt install -y \
         wget \
@@ -287,7 +307,7 @@ Requires=zanod.service
 [Service]
 Type=simple
 User=${USER}
-WorkingDirectory=${ZANO_DIR}
+WorkingDirectory=${ZANO_DIR}/TT-Miner
 ExecStart=${ZANO_DIR}/TT-Miner/TT-Miner -luck -coin ZANO -u zano-miner -o 127.0.0.1:${STRATUM_PORT}
 Restart=on-failure
 
@@ -328,15 +348,16 @@ EOF
 # Main installation routine
 main() {
     clear
-    echo -e "${BLUE}===== Zano Wallet, Miner, and Staking Setup =====${NC}"
-    
+    echo
+    echo -e "${BLUE}===== Zano Wallet, Miner, and Staking Setup for Ubuntu NVIDIA GPU Node =====${NC}"
+    echo
     # Check for sudo
     if [ "$(id -u)" = "0" ]; then
         error "Please do not run this script as root. Use sudo only for specific commands."
     fi
 
     # Confirm before proceeding
-    read -p "This script will install Zano wallet, miner, and set up staking as system services. Continue? (y/n): " CONFIRM
+    read -p "This script will install Zano wallet, miner, and set up staking as system services for a Ubuntu NVIDIA GPU node. Continue? (y/n): " CONFIRM
     if [[ ! $CONFIRM =~ ^[Yy]$ ]]; then
         error "Installation cancelled by user."
     fi
@@ -395,3 +416,4 @@ main() {
 
 # Run the main function
 main
+exit 0
