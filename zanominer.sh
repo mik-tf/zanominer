@@ -24,6 +24,158 @@ POS_RPC_PORT="50005"
 ZANOD_PID=""
 ZANO_DIR="$HOME/zano-project"
 
+# Help function
+show_help() {
+    echo -e "${BLUE}===== Zano Miner Script Help =====${NC}"
+    echo -e "Usage: bash zanominer.sh [COMMAND]"
+    echo
+    echo "Commands:"
+    echo -e "${GREEN}  install${NC}       - Install the script in path"
+    echo -e "${GREEN}  uninstall${NC}     - Uninstall the script in path"
+    echo -e "${GREEN}  help${NC}          - Show this help message"
+    echo -e "${GREEN}  build${NC}         - Run full installation and setup"
+    echo -e "${GREEN}  show_services${NC} - Show status of all Zano services"
+    echo -e "${GREEN}  start${NC}         - Start all Zano services"
+    echo -e "${GREEN}  stop${NC}          - Stop all Zano services"
+    echo -e "${GREEN}  restart${NC}       - Restart all Zano services"
+    echo -e "${GREEN}  help${NC}          - Show this help message"
+    echo
+    echo "Examples:"
+    echo "  bash zanominer.sh build          # Run full installation"
+    echo "  bash zanominer.sh show_services  # Check services status"
+    echo
+    echo "Requirements:"
+    echo "- Ubuntu Desktop 24.04"
+    echo "- NVIDIA GPU"
+    echo "- Sudo privileges"
+    echo
+    echo "Notes:"
+    echo "- The build command will install all dependencies and set up mining"
+    echo "- Service commands require the initial build to be completed"
+    echo "- Wallet details are saved in $ZANO_DIR/wallet-details.txt"
+    echo
+    echo "License: Apache 2.0"
+    echo "For issues or more information, visit:"
+    echo "Reference: https://github.com/Mik-TF/zanominer"
+}
+
+# Command line argument handling
+handle_command() {
+    case "$1" in
+        build)
+            main
+            exit 0
+            ;;
+        show_services)
+            check_services_status
+            exit 0
+            ;;
+        install)
+            install
+            exit 0
+            ;;
+        uninstall)
+            uninstall
+            exit 0
+            ;;
+        start)
+            start_services
+            exit 0
+            ;;
+        stop)
+            stop_services
+            exit 0
+            ;;
+        restart)
+            restart_services
+            exit 0
+            ;;
+        help)
+            show_help
+            exit 0
+            ;;
+        *)
+            show_help
+            exit 0
+            ;;
+    esac
+}
+
+# Service management functions
+check_services_status() {
+    echo -e "${BLUE}===== Zano Services Status =====${NC}"
+    for service in zanod tt-miner zano-pos-mining; do
+        status=$(systemctl is-active $service.service)
+        if [ "$status" = "active" ]; then
+            echo -e "${GREEN}● $service.service is running${NC}"
+        else
+            echo -e "${RED}○ $service.service is $status${NC}"
+        fi
+        echo "---"
+        systemctl status $service.service --no-pager | grep -A 2 "Active:"
+        echo
+    done
+}
+
+start_services() {
+    log "Starting all Zano services..."
+    sudo systemctl start zanod.service
+    sleep 10
+    sudo systemctl start tt-miner.service
+    sudo systemctl start zano-pos-mining.service
+    check_services_status
+}
+
+stop_services() {
+    log "Stopping all Zano services..."
+    sudo systemctl stop zano-pos-mining.service
+    sudo systemctl stop tt-miner.service
+    sudo systemctl stop zanod.service
+    check_services_status
+}
+
+restart_services() {
+    log "Restarting all Zano services..."
+    stop_services
+    sleep 5
+    start_services
+}
+
+# Function to install the script
+install() {
+    echo
+    echo -e "${GREEN}Installing Zano Miner...${NC}"
+    if sudo -v; then
+        sudo cp "$0" /usr/local/bin/zanominer
+        sudo chown root:root /usr/local/bin/zanominer
+        sudo chmod 755 /usr/local/bin/zanominer
+
+        echo
+        echo -e "${PURPLE}zanominer has been installed successfully.${NC}"
+        echo -e "You can now use ${GREEN}zanominer${NC} command from anywhere."
+        echo
+        echo -e "Use ${BLUE}zanominer help${NC} to see the commands."
+        echo
+    else
+        echo -e "${RED}Error: Failed to obtain sudo privileges. Installation aborted.${NC}"
+        exit 1
+    fi
+}
+
+# Function to uninstall the script
+uninstall() {
+    echo
+    echo -e "${GREEN}Uninstalling zanominer...${NC}"
+    if sudo -v; then
+        sudo rm -f /usr/local/bin/zanominer
+        echo -e "${PURPLE}zanominer has been uninstalled successfully.${NC}"
+        echo
+    else
+        echo -e "${RED}Error: Failed to obtain sudo privileges. Uninstallation aborted.${NC}"
+        exit 1
+    fi
+}
+
 # Logging functions
 log() {
     echo -e "${GREEN}[ZANO SETUP]${NC} $1"
@@ -45,7 +197,7 @@ error() {
 start_zanod() {
     log "Starting Zano daemon in background..."
     cd "$ZANO_DIR" || error "Failed to change to Zano directory"
-    ./zanod > zanod_output.log 2>&1 &
+    ${ZANO_DIR}/zanod > zanod_output.log 2>&1 &
     ZANOD_PID=$!
     log "Zano daemon started with PID: $ZANOD_PID"
     log "Entering sleep for 30 seconds to let the blockchain sync."
@@ -133,7 +285,7 @@ download_zano_components() {
 
     # Allow execute and Extract
     chmod +x $ZANO_IMAGE_FILENAME
-    ./$ZANO_IMAGE_FILENAME --appimage-extract || error "Failed to extract AppImage"
+    ${ZANO_DIR}/$ZANO_IMAGE_FILENAME --appimage-extract || error "Failed to extract AppImage"
     
     # Move programs to working directory and clean up
     mv "$ZANO_DIR/squashfs-root/usr/bin/simplewallet" "$ZANO_DIR/"
@@ -199,12 +351,12 @@ create_zano_wallet() {
     start_zanod
 
     # Create wallet (non-interactive)
-    ./simplewallet --generate-new-wallet=${WALLET_NAME}.wallet <<EOF
+    ${ZANO_DIR}/simplewallet --generate-new-wallet=${WALLET_NAME}.wallet <<EOF
 ${WALLET_PASSWORD}
 EOF
 
     # Open wallet to show address
-    WALLET_ADDRESS=$(./simplewallet --wallet-file=${WALLET_NAME}.wallet <<EOF
+    WALLET_ADDRESS=$(${ZANO_DIR}/simplewallet --wallet-file=${WALLET_NAME}.wallet <<EOF
 ${WALLET_PASSWORD}
 address
 exit
@@ -218,7 +370,7 @@ EOF
     echo -e "${BLUE}Wallet Address: ${WALLET_ADDRESS}${NC}"
 
     # Save seed phrase
-    SEED_PHRASE=$(./simplewallet --wallet-file=${WALLET_NAME}.wallet <<EOF
+    SEED_PHRASE=$(${ZANO_DIR}/simplewallet --wallet-file=${WALLET_NAME}.wallet <<EOF
 ${WALLET_PASSWORD}
 show_seed
 ${WALLET_PASSWORD}
@@ -390,30 +542,15 @@ main() {
     # Prompt to start services
     read -p "Would you like to start the services now? (y/n): " START_SERVICES
     if [[ $START_SERVICES =~ ^[Yy]$ ]]; then
-        log "Starting zanod service..."
-        sudo systemctl start zanod.service
-        sleep 10
-        
-        log "Starting tt-miner service..."
-        sudo systemctl start tt-miner.service
-        sleep 5
-        
-        log "Starting pos-mining service..."
-        sudo systemctl start zano-pos-mining.service
-        
-        # Check services status
-        for service in zanod tt-miner zano-pos-mining; do
-            status=$(systemctl is-active $service.service)
-            if [ "$status" = "active" ]; then
-                log "$service.service started successfully"
-            else
-                warn "$service.service failed to start. Status: $status"
-                echo "Check logs with: sudo journalctl -u $service.service"
-            fi
-        done
+        start_services
     fi
 }
 
-# Run the main function
-main
+# Handle command line arguments
+if [ $# -eq 0 ]; then
+    show_help
+    exit 1
+else
+    handle_command "$1"
+fi
 exit 0
