@@ -423,13 +423,40 @@ setup_tt_miner() {
     chmod +x TT-Miner
 }
 
+create_service_scripts() {
+    log "Creating service scripts..."
+    
+    # Create zanod script
+    sudo tee /usr/local/bin/run-zanod.sh > /dev/null << EOF
+#!/bin/bash
+cd ${ZANO_DIR}
+./zanod --stratum --stratum-miner-address=${WALLET_ADDRESS} --stratum-bind-port=${STRATUM_PORT}
+EOF
+
+    # Create TT-Miner script
+    sudo tee /usr/local/bin/run-tt-miner.sh > /dev/null << EOF
+#!/bin/bash
+cd ${ZANO_DIR}/TT-Miner
+./TT-Miner -luck -coin ZANO -u miner -o 127.0.0.1:${STRATUM_PORT}
+EOF
+
+    # Create PoS Mining script
+    sudo tee /usr/local/bin/run-pos-mining.sh > /dev/null << EOF
+#!/bin/bash
+cd ${ZANO_DIR}
+./simplewallet --wallet-file=${WALLET_NAME}.wallet --password=${WALLET_PASSWORD} --rpc-bind-port=${POS_RPC_PORT} --do-pos-mining --log-level=0 --log-file=pos-mining.log --deaf ${REWARD_OPTION}
+EOF
+
+    # Make scripts executable
+    sudo chmod +x /usr/local/bin/run-zanod.sh
+    sudo chmod +x /usr/local/bin/run-tt-miner.sh
+    sudo chmod +x /usr/local/bin/run-pos-mining.sh
+}
+
 # Create systemd service files
 create_systemd_services() {
+    create_service_scripts
     log "Creating systemd service files..."
-
-    # Create wallet password file first
-    echo "${WALLET_PASSWORD}" | sudo tee /etc/zano-wallet-password > /dev/null
-    sudo chmod 600 /etc/zano-wallet-password
 
     # Ask about separate reward address for staking rewards
     read -p "Do you want to use a separate address for mining rewards? (y/n): " USE_SEPARATE_REWARD
@@ -451,13 +478,7 @@ After=network.target
 [Service]
 Type=simple
 User=${USER}
-WorkingDirectory=${ZANO_DIR}
-ExecStart=${ZANO_DIR}/zanod \
-    --stratum \
-    --stratum-miner-address=${WALLET_ADDRESS} \
-    --stratum-bind-port=${STRATUM_PORT} \
-    --no-console \
-    --disable-stop-if-time-out-of-sync
+ExecStart=/usr/local/bin/run-zanod.sh
 StandardInput=null
 StandardOutput=append:/var/log/zanod.log
 StandardError=append:/var/log/zanod.error.log
@@ -478,9 +499,11 @@ Requires=zanod.service
 [Service]
 Type=simple
 User=${USER}
-WorkingDirectory=${ZANO_DIR}/TT-Miner
-ExecStart=${ZANO_DIR}/TT-Miner/TT-Miner -luck -coin ZANO -u zano-miner -o 127.0.0.1:${STRATUM_PORT}
-Restart=on-failure
+ExecStart=/usr/local/bin/run-tt-miner.sh
+StandardOutput=append:/var/log/tt-miner.log
+StandardError=append:/var/log/tt-miner.error.log
+Restart=always
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
@@ -497,8 +520,11 @@ Requires=zanod.service
 Type=simple
 User=${USER}
 WorkingDirectory=${ZANO_DIR}
-ExecStart=${ZANO_DIR}/simplewallet --wallet-file=${WALLET_NAME}.wallet --password=${WALLET_PASSWORD} --rpc-bind-port=${POS_RPC_PORT} --do-pos-mining --log-level=0 --log-file=${ZANO_DIR}/pos-mining.log --deaf ${REWARD_OPTION}
-Restart=on-failure
+ExecStart=/usr/local/bin/run-pos-mining.sh
+StandardOutput=append:/var/log/zano-pos-mining.log
+StandardError=append:/var/log/zano-pos-mining.error.log
+Restart=always
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
