@@ -16,7 +16,7 @@
 - [Important Notes](#important-notes)
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
-- [ThreeFold and Zano](#threefold-and-zano)
+- [References](#references)
 - [Contributing](#contributing)
 - [Support](#support)
 
@@ -42,8 +42,6 @@ A comprehensive setup script for Zano wallet, mining, and staking on Ubuntu with
 - NVIDIA GPU
 - Sudo privileges
 - Internet connection
-
-If you don't have the hardware necessary to mine Zano, you can use a node on the ThreeFold Grid. [Read more about this below](#threefold-and-zano).
 
 ## Installation
 
@@ -139,7 +137,7 @@ If you encounter issues:
 
 The work is under the [Apache License 2.0 license](./LICENSE).
 
-## ThreeFold and Zano
+## References
 
 You can easily mine and stake Zano using a node on the ThreeFold Grid. For more information, read [this guide](https://forum.threefold.io/t/mine-and-stake-zano-on-the-threefold-grid/4465).
 
