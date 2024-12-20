@@ -46,7 +46,8 @@ A comprehensive setup script for Zano wallet, mining, and staking on Ubuntu with
 
 ```bash
 # Download the script
-wget https://raw.githubusercontent.com/Mik-TF/zanominer/main/zanominer.sh
+git clone https://github.com/Mik-TF/zanominer
+cd zanominer
 
 # Install in system path
 bash zanominer.sh install
