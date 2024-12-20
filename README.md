@@ -139,6 +139,8 @@ The work is under the [Apache License 2.0 license](./LICENSE).
 
 ## References
 
+For more information on Zano, read the [Zano documentation](https://docs.zano.org/).
+
 You can easily mine and stake Zano using a node on the ThreeFold Grid. For more information, read [this guide](https://forum.threefold.io/t/mine-and-stake-zano-on-the-threefold-grid/4465).
 
 ## Contributing
