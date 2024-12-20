@@ -3,6 +3,7 @@
 # Comprehensive Zano Wallet, Miner, and Staking Setup Script with Systemd
 # For Ubuntu Desktop
 # Supports full installation: dependencies, wallet creation, mining, and staking as system services
+# This script automates the complete setup process with upfront user input collection
 
 # Color codes for output
 RED='\033[0;31m'
@@ -13,9 +14,12 @@ PURPLE='\033[0;35m'
 NC='\033[0m' # No Color
 
 # Configuration Variables
+# URLs and filenames for Zano components
 ZANO_PREFIX_URL="https://build.zano.org/builds/"
 ZANO_IMAGE_FILENAME="zano-linux-x64-develop-v2.0.1.367[d63feec].AppImage"
 ZANO_URL=${ZANO_PREFIX_URL}${ZANO_IMAGE_FILENAME}
+
+# User input variables - these will be populated by collect_user_inputs()
 REWARD_ADDRESS=""
 WALLET_PASSWORD=""
 WALLET_NAME=""
@@ -25,6 +29,8 @@ SET_OWN_SEED_PASSWORD=""
 USE_SEPARATE_REWARD=""
 START_SERVICES_AFTER_INSTALL=""
 REWARD_OPTION=""
+
+# Mining and network configuration
 TT_MINER_VERSION="2023.1.0"
 STRATUM_PORT="11555"
 POS_RPC_PORT="50005"
@@ -32,13 +38,17 @@ ZANOD_PID=""
 ZANO_DIR="$HOME/zano-project"
 
 # Function to collect all user inputs upfront
+# This consolidates all user interaction at the beginning of the script
 collect_user_inputs() {
     echo -e "${BLUE}===== User Configuration =====${NC}"
+    echo "This section will collect all necessary information for your Zano setup."
+    echo "Please provide the following details:"
+    echo
     
-    # Wallet name
+    # Wallet name input
     read -p "Enter a name for your wallet (e.g., myzanowallet): " WALLET_NAME
     
-    # Wallet password
+    # Wallet password setup
     read -p "Do you want to set your own wallet password? (y/n): " SET_OWN_PASSWORD
     if [[ $SET_OWN_PASSWORD =~ ^[Yy]$ ]]; then
         while true; do
@@ -54,10 +64,12 @@ collect_user_inputs() {
             fi
         done
     else
+        # Generate random password if user doesn't want to set their own
         WALLET_PASSWORD=$(pwgen -s 16 1)
+        echo "A secure random password has been generated for your wallet."
     fi
 
-    # Seed password
+    # Seed password setup
     read -p "Do you want to set your own seed password? (y/n): " SET_OWN_SEED_PASSWORD
     if [[ $SET_OWN_SEED_PASSWORD =~ ^[Yy]$ ]]; then
         while true; do
@@ -73,10 +85,12 @@ collect_user_inputs() {
             fi
         done
     else
+        # Generate random seed password if user doesn't want to set their own
         SEED_PASSWORD=$(pwgen -s 16 1)
+        echo "A secure random seed password has been generated."
     fi
 
-    # Reward address
+    # Mining rewards address configuration
     read -p "Do you want to use a separate address for mining rewards? (y/n): " USE_SEPARATE_REWARD
     if [[ $USE_SEPARATE_REWARD =~ ^[Yy]$ ]]; then
         read -p "Enter the separate reward address: " REWARD_ADDRESS
@@ -85,14 +99,16 @@ collect_user_inputs() {
         REWARD_OPTION=""
     fi
 
-    # Start services confirmation
+    # Service autostart configuration
     read -p "Would you like to start the services after installation? (y/n): " START_SERVICES_AFTER_INSTALL
 
-    echo -e "${GREEN}All user inputs collected. Starting installation...${NC}"
+    echo -e "${GREEN}All user inputs collected successfully. Starting installation...${NC}"
     echo
+    # Brief pause to let user read the confirmation
+    sleep 2
 }
 
-# Help function
+# Help function - Displays usage information and available commands
 show_help() {
     echo -e "${BLUE}===== Zano Miner Script Help =====${NC}"
     echo -e "Usage: bash zanominer.sh [COMMAND]"
@@ -127,6 +143,7 @@ show_help() {
 }
 
 # Command line argument handling
+# Processes the script commands and directs to appropriate functions
 handle_command() {
     case "$1" in
         build)
@@ -169,6 +186,7 @@ handle_command() {
 }
 
 # Service management functions
+# Checks the status of all Zano-related services
 check_services_status() {
     echo -e "${BLUE}===== Zano Services Status =====${NC}"
     for service in zanod tt-miner zano-pos-mining; do
@@ -184,15 +202,17 @@ check_services_status() {
     done
 }
 
+# Starts all Zano services in the correct order
 start_services() {
     log "Starting all Zano services..."
     sudo systemctl start zanod.service
-    sleep 10
+    sleep 10  # Wait for daemon to initialize
     sudo systemctl start tt-miner.service
     sudo systemctl start zano-pos-mining.service
     check_services_status
 }
 
+# Stops all Zano services in the correct order
 stop_services() {
     log "Stopping all Zano services..."
     sudo systemctl stop zano-pos-mining.service
@@ -201,14 +221,15 @@ stop_services() {
     check_services_status
 }
 
+# Restarts all Zano services
 restart_services() {
     log "Restarting all Zano services..."
     stop_services
-    sleep 5
+    sleep 5  # Wait for clean shutdown
     start_services
 }
 
-# Function to install the script
+# Function to install the script system-wide
 install() {
     echo
     echo -e "${GREEN}Installing Zano Miner...${NC}"
@@ -229,7 +250,7 @@ install() {
     fi
 }
 
-# Function to uninstall the script
+# Function to uninstall the script from the system
 uninstall() {
     echo
     echo -e "${GREEN}Uninstalling zanominer...${NC}"
@@ -243,7 +264,7 @@ uninstall() {
     fi
 }
 
-# Logging functions
+# Logging functions for consistent output formatting
 log() {
     echo -e "${GREEN}[ZANO SETUP]${NC} $1"
     sleep 1
@@ -261,6 +282,7 @@ error() {
 }
 
 # Daemon management functions
+# Starts the Zano daemon in background
 start_zanod() {
     log "Starting Zano daemon in background..."
     cd "$ZANO_DIR" || error "Failed to change to Zano directory"
@@ -272,9 +294,10 @@ start_zanod() {
     if ! ps -p $ZANOD_PID > /dev/null; then
         error "Failed to start zanod process"
     fi
-    sleep 25
+    sleep 25  # Additional wait time for blockchain sync
 }
 
+# Stops the Zano daemon safely
 stop_zanod() {
     if [ ! -z "$ZANOD_PID" ] && ps -p $ZANOD_PID > /dev/null; then
         log "Stopping Zanod (PID: $ZANOD_PID)"
@@ -287,11 +310,14 @@ stop_zanod() {
 }
 
 # Dependency check and installation
+# Installs all required system packages and NVIDIA drivers
 install_dependencies() {
     log "Checking and installing system dependencies..."
     
+    # Update package lists
     sudo apt update
 
+    # Check for NVIDIA GPU and install appropriate drivers
     if lspci | grep -i nvidia > /dev/null; then
         log "NVIDIA GPU detected. Checking NVIDIA drivers and CUDA..."
         
@@ -318,6 +344,7 @@ install_dependencies() {
         warn "No NVIDIA GPU detected. Mining performance may be limited."
     fi
 
+    # Install essential system dependencies
     sudo apt install -y \
         wget \
         curl \
@@ -329,24 +356,28 @@ install_dependencies() {
         nvidia-driver-535 \
         gpg
 
+    # Install password generator if not present
     if ! command -v pwgen &> /dev/null; then
         sudo apt install -y pwgen
     fi
 }
 
-# Download Zano components
+# Download and extract Zano components
 download_zano_components() {
     log "Starting download of Zano components..."
     
+    # Create and enter Zano directory
     mkdir -p "$ZANO_DIR"
     cd "$ZANO_DIR" || error "Failed to change to Zano directory"
     log "All files will be stored in ${ZANO_DIR}"
 
+    # Skip download if components already exist
     if [ -f "$ZANO_DIR/simplewallet" ] && [ -f "$ZANO_DIR/zanod" ]; then
         log "Zano components already present, skipping download and extraction..."
         return
     fi
 
+    # Download Zano CLI wallet if not present
     if [ ! -f ${ZANO_IMAGE_FILENAME} ]; then
         log "Downloading Zano CLI Wallet..."
         wget $ZANO_URL || error "Failed to download Zano CLI Wallet"
@@ -354,25 +385,31 @@ download_zano_components() {
    
     log "Zano CLI Wallet file has been downloaded..."
 
+    # Extract AppImage contents
     chmod +x $ZANO_IMAGE_FILENAME
     ${ZANO_DIR}/$ZANO_IMAGE_FILENAME --appimage-extract || error "Failed to extract AppImage"
     
+    # Move required binaries to working directory and cleanup
     mv "$ZANO_DIR/squashfs-root/usr/bin/simplewallet" "$ZANO_DIR/"
     mv "$ZANO_DIR/squashfs-root/usr/bin/zanod" "$ZANO_DIR/"
     rm -r "$ZANO_DIR/squashfs-root"
 }
 
+# Create and configure Zano wallet
 create_zano_wallet() {
     log "Creating Zano Wallet..."
     
     log "Generating wallet: ${WALLET_NAME}.wallet"
     
+    # Start daemon for wallet creation
     start_zanod
 
+    # Create new wallet using collected password
     ${ZANO_DIR}/simplewallet --generate-new-wallet=${WALLET_NAME}.wallet <<EOF
 ${WALLET_PASSWORD}
 EOF
 
+    # Get wallet address
     WALLET_ADDRESS=$(${ZANO_DIR}/simplewallet --wallet-file=${WALLET_NAME}.wallet <<EOF
 ${WALLET_PASSWORD}
 address
@@ -380,11 +417,13 @@ exit
 EOF
 )
 
+    # Extract wallet address from output
     WALLET_ADDRESS=$(echo "$WALLET_ADDRESS" | grep -oP 'Zx[a-zA-Z0-9]+' | head -n 1)
 
     log "Wallet created successfully!"
     echo -e "${BLUE}Wallet Address: ${WALLET_ADDRESS}${NC}"
 
+    # Get seed phrase
     SEED_PHRASE=$(${ZANO_DIR}/simplewallet --wallet-file=${WALLET_NAME}.wallet <<EOF
 ${WALLET_PASSWORD}
 show_seed
@@ -395,64 +434,78 @@ exit
 EOF
 )
 
+    # Extract seed phrase from output
     SEED_PHRASE=$(echo "$SEED_PHRASE" | grep -A1 "Remember, restoring a wallet from Secured Seed can only be done if you know its password." | tail -n1 | sed 's/\[Zano wallet.*$//')
 
+    # Stop daemon after wallet creation
     stop_zanod
 
+    # Save wallet details to secure file
     echo "Wallet Name: ${WALLET_NAME}" > "$ZANO_DIR/wallet-details.txt"
     echo "Wallet Address: ${WALLET_ADDRESS}" >> "$ZANO_DIR/wallet-details.txt"
     echo "Wallet Password: ${WALLET_PASSWORD}" >> "$ZANO_DIR/wallet-details.txt"
     echo "Seed Password: ${SEED_PASSWORD}" >> "$ZANO_DIR/wallet-details.txt"
     echo "Seed Phrase: ${SEED_PHRASE}" >> "$ZANO_DIR/wallet-details.txt"
 
+    # Secure the wallet details file
     chmod 600 "$ZANO_DIR/wallet-details.txt"
 }
 
-# Setup TT-Miner
+# Setup TT-Miner for GPU mining
 setup_tt_miner() {
     log "Setting up TT-Miner..."
     
     cd "$ZANO_DIR" || error "Failed to change to Zano directory"
 
+    # Download TT-Miner if not present
     if [ ! -f TT-Miner-${TT_MINER_VERSION}.tar.gz ]; then
         log "Downloading Miner"
         wget https://github.com/TrailingStop/TT-Miner-release/releases/download/${TT_MINER_VERSION}/TT-Miner-${TT_MINER_VERSION}.tar.gz
     fi
 
+    # Extract and set permissions
     tar -xf TT-Miner-${TT_MINER_VERSION}.tar.gz
     chmod +x TT-Miner
 }
 
+# Create service scripts for systemd services
 create_service_scripts() {
     log "Creating service scripts..."
     
+    # Create zanod daemon script
     sudo tee /usr/local/bin/run-zanod.sh > /dev/null << EOF
 #!/bin/bash
 cd ${ZANO_DIR}
 ./zanod --stratum --stratum-miner-address=${WALLET_ADDRESS} --stratum-bind-port=${STRATUM_PORT} --no-console
 EOF
 
+    # Create TT-Miner script
     sudo tee /usr/local/bin/run-tt-miner.sh > /dev/null << EOF
 #!/bin/bash
 cd ${ZANO_DIR}/TT-Miner
 ./TT-Miner -luck -coin ZANO -u miner -o 127.0.0.1:${STRATUM_PORT}
 EOF
 
+    # Create PoS Mining script
     sudo tee /usr/local/bin/run-pos-mining.sh > /dev/null << EOF
 #!/bin/bash
 cd ${ZANO_DIR}
 ./simplewallet --wallet-file=${WALLET_NAME}.wallet --password=${WALLET_PASSWORD} --rpc-bind-port=${POS_RPC_PORT} --do-pos-mining --log-level=0 --log-file=pos-mining.log --deaf ${REWARD_OPTION}
 EOF
 
+    # Set execute permissions
     sudo chmod +x /usr/local/bin/run-zanod.sh
     sudo chmod +x /usr/local/bin/run-tt-miner.sh
     sudo chmod +x /usr/local/bin/run-pos-mining.sh
 }
 
+# Create and configure systemd services
 create_systemd_services() {
+    # Create service scripts first
     create_service_scripts
     log "Creating systemd service files..."
 
+    # Zano Daemon Systemd Service
     sudo tee /etc/systemd/system/zanod.service > /dev/null << EOF
 [Unit]
 Description=Zano Blockchain Daemon
@@ -472,6 +525,7 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
+    # TT-Miner Systemd Service
     sudo tee /etc/systemd/system/tt-miner.service > /dev/null << EOF
 [Unit]
 Description=TT-Miner for Zano
@@ -491,6 +545,7 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
+    # PoS Mining Systemd Service
     sudo tee /etc/systemd/system/zano-pos-mining.service > /dev/null << EOF
 [Unit]
 Description=Zano Proof of Stake Mining
@@ -511,6 +566,7 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
+    # Reload systemd and enable services
     sudo systemctl daemon-reload
     sudo systemctl enable zanod.service
     sudo systemctl enable tt-miner.service
@@ -526,23 +582,28 @@ main() {
     echo -e "${BLUE}===== Zano Wallet, Miner, and Staking Setup for Ubuntu NVIDIA GPU Node =====${NC}"
     echo
 
+    # Check if running as root
     if [ "$(id -u)" = "0" ]; then
         error "Please do not run this script as root. Use sudo only for specific commands."
     fi
 
+    # Initial confirmation
     read -p "This script will install Zano wallet, miner, and set up staking as system services for a Ubuntu NVIDIA GPU node. Continue? (y/n): " CONFIRM
     if [[ ! $CONFIRM =~ ^[Yy]$ ]]; then
         error "Installation cancelled by user."
     fi
 
+    # Collect all user inputs at the start
     collect_user_inputs
 
+    # Proceed with installation steps
     install_dependencies
     download_zano_components
     create_zano_wallet
     setup_tt_miner
     create_systemd_services
 
+    # Installation complete message
     log "Zano Wallet, Miner, and Staking Setup Completed!"
     echo -e "${YELLOW}Important:${NC}"
     echo "1. Wallet details saved in: $ZANO_DIR/wallet-details.txt"
@@ -553,6 +614,7 @@ main() {
     echo -e "${RED}IMPORTANT: Securely backup your wallet details file!${NC}"
     echo -e "${BLUE}Recommended: Transfer some ZANO to your wallet to start staking${NC}"
     
+    # Start services if requested during setup
     if [[ $START_SERVICES_AFTER_INSTALL =~ ^[Yy]$ ]]; then
         start_services
     fi
