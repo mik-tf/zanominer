@@ -435,7 +435,7 @@ create_service_scripts() {
     sudo tee /usr/local/bin/run-zanod.sh > /dev/null << EOF
 #!/bin/bash
 cd ${ZANO_DIR}
-./zanod --stratum --stratum-miner-address=${WALLET_ADDRESS} --stratum-bind-port=${STRATUM_PORT}
+./zanod --stratum --stratum-miner-address=${WALLET_ADDRESS} --stratum-bind-port=${STRATUM_PORT} --no-console
 EOF
 
     # Create TT-Miner script
