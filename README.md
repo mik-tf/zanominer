@@ -112,7 +112,7 @@ zanominer restart  # Restart all services
 ## Important Notes
 
 - Backup your wallet details file immediately after creation
-  - You should save if offline and delete the wallet details file for optimum security 
+  - You should save the information offline and delete the wallet details file for optimal security 
 - Transfer ZANO to your wallet to begin staking
 - Monitor mining and staking progress through service logs
 - Keep your system updated and secured
