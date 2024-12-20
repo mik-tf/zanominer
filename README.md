@@ -105,12 +105,13 @@ zanominer restart  # Restart all services
 
 - Wallet details are saved in `~/zano-project/wallet-details.txt`
 - File permissions are set to 600 (user read/write only)
-- Passwords are stored securely
+- Passwords and the seed phrase are not encrypted
 - Service files use appropriate permissions
 
 ## Important Notes
 
 - Backup your wallet details file immediately after creation
+  - You should save if offline and delete the wallet details file for optimum security 
 - Transfer ZANO to your wallet to begin staking
 - Monitor mining and staking progress through service logs
 - Keep your system updated and secured
