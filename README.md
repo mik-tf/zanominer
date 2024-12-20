@@ -114,6 +114,7 @@ zanominer restart  # Restart all services
 - Transfer ZANO to your wallet to begin staking
 - Monitor mining and staking progress through service logs
 - Keep your system updated and secured
+- Use at your own risk
 
 ## Troubleshooting
 
@@ -125,7 +126,7 @@ If you encounter issues:
 
 ## License
 
-Apache License 2.0
+The work is under the [Apache License 2.0 license](./LICENSE).
 
 ## Contributing
 
