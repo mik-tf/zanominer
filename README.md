@@ -3,21 +3,21 @@
 <h2>Table of Contents</h2>
 
 - [Introduction](#introduction)
-- [Prerequisites](#prerequisites)
 - [Features](#features)
-- [Versions Included](#versions-included)
-- [Installation Steps](#installation-steps)
-- [What the Script Does](#what-the-script-does)
-  - [Dependencies](#dependencies)
-  - [Wallet Creation](#wallet-creation)
-  - [Mining \& Staking Setup](#mining--staking-setup)
-- [Security Considerations](#security-considerations)
-- [Systemd Services](#systemd-services)
-- [Post-Installation](#post-installation)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Set Up the Miner](#set-up-the-miner)
+- [Usage](#usage)
+  - [Available Commands](#available-commands)
+  - [Examples](#examples)
+- [Service Management](#service-management)
+  - [Control Services](#control-services)
+- [Security](#security)
+- [Important Notes](#important-notes)
 - [Troubleshooting](#troubleshooting)
-- [Disclaimer](#disclaimer)
-- [Contributions](#contributions)
 - [License](#license)
+- [Contributing](#contributing)
+- [Support](#support)
 
 ---
 
