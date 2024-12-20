@@ -70,7 +70,7 @@ zanominer [COMMAND]
 - `install` - Install the script in system path
 - `uninstall` - Remove the script from system path
 - `build` - Run full installation and setup
-- `show_services` - Display status of all Zano services
+- `services` - Display status of all Zano services
 - `start` - Start all Zano services
 - `stop` - Stop all Zano services
 - `restart` - Restart all Zano services
@@ -80,7 +80,7 @@ zanominer [COMMAND]
 
 ```bash
 # Check services status
-zanominer show_services
+zanominer services
 
 # Remove script from path
 zanominer uninstall
