@@ -250,14 +250,41 @@ install() {
     fi
 }
 
-# Function to uninstall the script from the system
+# Function to uninstall the script
 uninstall() {
     echo
     echo -e "${GREEN}Uninstalling zanominer...${NC}"
     if sudo -v; then
+
+        # Stop services if running
+        if systemctl is-active --quiet zanod.service || \
+           systemctl is-active --quiet tt-miner.service || \
+           systemctl is-active --quiet zano-pos-mining.service; then
+            echo "Stopping mining services..."
+            stop_services
+        fi
+
+        # Remove systemd services
+        echo "Removing systemd services..."
+        sudo systemctl disable zanod.service tt-miner.service zano-pos-mining.service 2>/dev/null
+        sudo rm -f /etc/systemd/system/zanod.service
+        sudo rm -f /etc/systemd/system/tt-miner.service
+        sudo rm -f /etc/systemd/system/zano-pos-mining.service
+        sudo systemctl daemon-reload
+
         sudo rm -f /usr/local/bin/zanominer
-        echo -e "${PURPLE}zanominer has been uninstalled successfully.${NC}"
-        echo
+
+        # Ask user if they want to remove mining data
+        read -p "Do you want to remove all Zano project directory? (y/n): " REMOVE_DATA
+        if [[ $REMOVE_DATA =~ ^[Yy]$ ]]; then
+            echo "Removing all mining data..."
+            rm -rf "$ZANO_DIR"
+        else
+            echo "Zano project preserved in $ZANO_DIR"
+        fi
+
+        echo -e "${GREEN}Uninstallation completed successfully.${NC}"
+
     else
         echo -e "${RED}Error: Failed to obtain sudo privileges. Uninstallation aborted.${NC}"
         exit 1
