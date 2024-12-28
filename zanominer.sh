@@ -29,6 +29,8 @@ SET_OWN_SEED_PASSWORD=""
 USE_SEPARATE_REWARD=""
 START_SERVICES_AFTER_INSTALL=""
 REWARD_OPTION=""
+USE_POOL_MINING=""
+POOL_WORKER_NAME=""
 
 # Mining and network configuration
 TT_MINER_VERSION="2023.1.0"
@@ -97,6 +99,13 @@ collect_user_inputs() {
         REWARD_OPTION="--pos-mining-reward-address=${REWARD_ADDRESS}"
     else
         REWARD_OPTION=""
+    fi
+
+    # Mining pool configuration
+    read -p "Do you want to use the Wooly Pooly mining pool instead of solo mining? (y/n): " USE_POOL_MINING
+    if [[ $USE_POOL_MINING =~ ^[Yy]$ ]]; then
+        read -p "Enter a worker name for pool mining (e.g., rig1, worker1): " POOL_WORKER_NAME
+        log "Pool mining will be configured with worker name: $POOL_WORKER_NAME"
     fi
 
     # Service autostart configuration
@@ -500,18 +509,38 @@ create_service_scripts() {
     log "Creating service scripts..."
     
     # Create zanod daemon script
-    sudo tee /usr/local/bin/run-zanod.sh > /dev/null << EOF
+    if [[ $USE_POOL_MINING =~ ^[Yy]$ ]]; then
+        # Zanod configuration for mining pool
+        sudo tee /usr/local/bin/run-zanod.sh > /dev/null << EOF
+#!/bin/bash
+cd ${ZANO_DIR}
+./zanod --no-console
+EOF
+    else
+        # Zanod configuration for solo mining
+        sudo tee /usr/local/bin/run-zanod.sh > /dev/null << EOF
 #!/bin/bash
 cd ${ZANO_DIR}
 ./zanod --stratum --stratum-miner-address=${WALLET_ADDRESS} --stratum-bind-port=${STRATUM_PORT} --no-console
 EOF
+    fi
 
     # Create TT-Miner script
-    sudo tee /usr/local/bin/run-tt-miner.sh > /dev/null << EOF
+    if [[ $USE_POOL_MINING =~ ^[Yy]$ ]]; then
+        # Pool mining configuration
+        sudo tee /usr/local/bin/run-tt-miner.sh > /dev/null << EOF
+#!/bin/bash
+cd ${ZANO_DIR}/TT-Miner
+./TT-Miner -luck -c ZANO -P ssl://${WALLET_ADDRESS}.${POOL_WORKER_NAME}@pool.woolypooly.com:3147
+EOF
+    else
+        # Solo mining configuration (original)
+        sudo tee /usr/local/bin/run-tt-miner.sh > /dev/null << EOF
 #!/bin/bash
 cd ${ZANO_DIR}/TT-Miner
 ./TT-Miner -luck -coin ZANO -u miner -o 127.0.0.1:${STRATUM_PORT}
 EOF
+    fi
 
     # Create PoS Mining script
     sudo tee /usr/local/bin/run-pos-mining.sh > /dev/null << EOF
