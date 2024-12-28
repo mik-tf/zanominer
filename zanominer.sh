@@ -117,81 +117,42 @@ collect_user_inputs() {
     sleep 2
 }
 
-# Help function - Displays usage information and available commands
-show_help() {
-    echo -e "${BLUE}===== Zano Miner Script Help =====${NC}"
-    echo -e "Usage: bash zanominer.sh [COMMAND]"
-    echo
-    echo "Commands:"
-    echo -e "${GREEN}  install${NC}       - Install the script in path"
-    echo -e "${GREEN}  uninstall${NC}     - Uninstall the script in path"
-    echo -e "${GREEN}  help${NC}          - Show this help message"
-    echo -e "${GREEN}  build${NC}         - Run full installation and setup"
-    echo -e "${GREEN}  status${NC}        - Show status of all Zano services"
-    echo -e "${GREEN}  start${NC}         - Start all Zano services"
-    echo -e "${GREEN}  stop${NC}          - Stop all Zano services"
-    echo -e "${GREEN}  restart${NC}       - Restart all Zano services"
-    echo
-    echo "Examples:"
-    echo "  bash zanominer.sh build     # Run full installation"
-    echo "  bash zanominer.sh status  # Check services status"
-    echo
-    echo "Requirements:"
-    echo "- Ubuntu Desktop 24.04"
-    echo "- NVIDIA GPU"
-    echo "- Sudo privileges"
-    echo
-    echo "Notes:"
-    echo "- The build command will install all dependencies and set up mining"
-    echo "- Service commands require the initial build to be completed"
-    echo "- Wallet details are saved in $ZANO_DIR/wallet-details.txt"
-    echo
-    echo "License: Apache 2.0"
-    echo "For issues or more information, visit:"
-    echo "Reference: https://github.com/Mik-TF/zanominer"
-}
+show_logs() {
+    echo -e "${BLUE}===== Available Log Files =====${NC}"
+    log_files=(
+        "/var/log/zanod.log"                  # Zano daemon service log
+        "/var/log/zanod.error.log"            # Zano daemon error log
+        "/var/log/tt-miner.log"               # TT-miner log
+        "/var/log/tt-miner.error.log"         # TT-miner error log
+        "/var/log/zano-pos-mining.log"        # Staking log
+        "/var/log/zano-pos-mining.error.log"  # Staking error log
+    )
 
-# Command line argument handling
-# Processes the script commands and directs to appropriate functions
-handle_command() {
-    case "$1" in
-        build)
-            main
-            exit 0
-            ;;
-        status)
-            check_services_status
-            exit 0
-            ;;
-        install)
-            install
-            exit 0
-            ;;
-        uninstall)
-            uninstall
-            exit 0
-            ;;
-        start)
-            start_services
-            exit 0
-            ;;
-        stop)
-            stop_services
-            exit 0
-            ;;
-        restart)
-            restart_services
-            exit 0
-            ;;
-        help)
-            show_help
-            exit 0
-            ;;
-        *)
-            show_help
-            exit 0
-            ;;
-    esac
+    # Display log files
+    for i in "${!log_files[@]}"; do
+        echo -e "${GREEN}[$i] ${log_files[$i]}${NC}"
+    done
+
+    # Get user selection
+    read -p "Select a log file to view (0-${#log_files[@]}): " log_selection
+
+    # Validate selection
+    if ! [[ "$log_selection" =~ ^[0-9]+$ ]] || [ "$log_selection" -lt 0 ] || [ "$log_selection" -ge "${#log_files[@]}" ]; then
+        echo -e "${RED}Invalid selection. Exiting...${NC}"
+        return
+    fi
+
+    # Display selected log file
+    selected_log="${log_files[$log_selection]}"
+    echo -e "${YELLOW}Displaying content of: $selected_log${NC}"
+    echo
+
+    # Check if the log file exists before attempting to print
+    if [ -f "$selected_log" ]; then
+        cat "$selected_log"
+    else
+        echo -e "${RED}Log file does not exist: $selected_log${NC}"
+    fi
 }
 
 # Service management functions
@@ -631,6 +592,41 @@ EOF
     log "Systemd services created and enabled!"
 }
 
+# Help function - Displays usage information and available commands
+show_help() {
+    echo -e "${BLUE}===== Zano Miner Script Help =====${NC}"
+    echo -e "Usage: zanominer [COMMAND]"
+    echo
+    echo "Commands:"
+    echo -e "${GREEN}  install${NC}       - Install the script in path"
+    echo -e "${GREEN}  uninstall${NC}     - Uninstall the script in path"
+    echo -e "${GREEN}  help${NC}          - Show this help message"
+    echo -e "${GREEN}  build${NC}         - Run full installation and setup"
+    echo -e "${GREEN}  status${NC}        - Show status of all Zano services"
+    echo -e "${GREEN}  start${NC}         - Start all Zano services"
+    echo -e "${GREEN}  stop${NC}          - Stop all Zano services"
+    echo -e "${GREEN}  logs${NC}          - Show logs of Zano services"
+    echo -e "${GREEN}  restart${NC}       - Restart all Zano services"
+    echo
+    echo "Examples:"
+    echo "  zanominer build   # Run full installation"
+    echo "  zanominer status  # Check services status"
+    echo
+    echo "Requirements:"
+    echo "- Ubuntu Desktop 24.04"
+    echo "- NVIDIA GPU"
+    echo "- Sudo privileges"
+    echo
+    echo "Notes:"
+    echo "- The build command will install all dependencies and set up mining"
+    echo "- Service commands require the initial build to be completed"
+    echo "- Wallet details are saved in $ZANO_DIR/wallet-details.txt"
+    echo
+    echo "License: Apache 2.0"
+    echo "For issues or more information, visit:"
+    echo "Reference: https://github.com/Mik-TF/zanominer"
+}
+
 # Main installation routine
 main() {
     clear
@@ -674,6 +670,52 @@ main() {
     if [[ $START_SERVICES_AFTER_INSTALL =~ ^[Yy]$ ]]; then
         start_services
     fi
+}
+
+# Command line argument handling
+# Processes the script commands and directs to appropriate functions
+handle_command() {
+    case "$1" in
+        build)
+            main
+            exit 0
+            ;;
+        status)
+            check_services_status
+            exit 0
+            ;;
+        install)
+            install
+            exit 0
+            ;;
+        uninstall)
+            uninstall
+            exit 0
+            ;;
+        start)
+            start_services
+            exit 0
+            ;;
+        stop)
+            stop_services
+            exit 0
+            ;;
+        restart)
+            restart_services
+            exit 0
+            ;;
+        logs)
+            show_logs
+            ;;
+        help)
+            show_help
+            exit 0
+            ;;
+        *)
+            show_help
+            exit 0
+            ;;
+    esac
 }
 
 # Handle command line arguments
