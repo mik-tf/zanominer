@@ -531,7 +531,7 @@ EOF
         sudo tee /usr/local/bin/run-tt-miner.sh > /dev/null << EOF
 #!/bin/bash
 cd ${ZANO_DIR}/TT-Miner
-./TT-Miner -luck -c ZANO -P ssl://${WALLET_ADDRESS}.${POOL_WORKER_NAME}@pool.woolypooly.com:3147
+./TT-Miner -luck -coin ZANO -P ssl://${WALLET_ADDRESS}.${POOL_WORKER_NAME}@pool.woolypooly.com:3147
 EOF
     else
         # Solo mining configuration (original)
