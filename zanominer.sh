@@ -312,8 +312,8 @@ show_mining_status() {
     if pgrep -x "TT-Miner" >/dev/null || systemctl is-active --quiet tt-miner.service; then
         echo -e "${GREEN}Mining is active${NC}"
         if [ -f "/var/log/tt-miner.log" ]; then
-            local hashrate=$(tail -n 50 /var/log/tt-miner.log | grep "Speed" | tail -n 1)
-            echo -e "${BLUE}Current Hashrate: $hashrate${NC}"
+            local hashrate=$(tail -n 50 /var/log/tt-miner.log | grep "GPU" | tail -n 1)
+            echo -e "${BLUE}Current Hashrate:${NC} $hashrate"
         fi
     else
         echo -e "${RED}Mining is not active${NC}"
@@ -329,8 +329,8 @@ show_staking_status() {
     if pgrep -x "simplewallet" >/dev/null || systemctl is-active --quiet zano-pos-mining.service; then
         echo -e "${GREEN}Staking is active${NC}"
         if [ -f "/var/log/zano-pos-mining.log" ]; then
-            local stake_info=$(tail -n 50 /var/log/zano-pos-mining.log | grep "staking" | tail -n 1)
-            echo -e "${BLUE}Staking Status: $stake_info${NC}"
+            local stake_info=$(tail -n 50 /var/log/zano-pos-mining.log | grep "PoS mining" | tail -n 1)
+            echo -e "${BLUE}Staking Status:${NC} $stake_info"
         fi
     else
         echo -e "${RED}Staking is not active${NC}"
@@ -358,13 +358,16 @@ show_wallet_balance() {
 }
 
 check_services_status() {
-    echo -e "${BLUE}===== Service Status =====${NC}"
+    echo -e "${BLUE}===== Zano Mining Services Status =====${NC}"
     for service in zanod tt-miner zano-pos-mining; do
-        if systemctl is-active --quiet $service; then
-            echo -e "${GREEN}● $service is running${NC}"
+        if systemctl is-active --quiet $service.service; then
+            echo -e "${GREEN}● $service.service is running${NC}"
         else
-            echo -e "${RED}○ $service is stopped${NC}"
+            echo -e "${RED}○ $service.service is stopped${NC}"
         fi
+        echo "---"
+        systemctl status $service.service --no-pager | grep -A 2 "Active:"
+        echo
     done
 }
 
@@ -650,6 +653,8 @@ show_interactive_menu() {
         case $choice in
             1) main ;;
             2) check_services_status 
+               show_mining_status
+               show_staking_status
                await_enter ;;
             3) start_services
                await_enter ;;
