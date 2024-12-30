@@ -22,7 +22,7 @@ REWARD_ADDRESS=""
 WALLET_PASSWORD=""
 WALLET_NAME=""
 SEED_PASSWORD=""
-SET_OWN_PASSWORD=""
+SET_OWN_WALLET_PASSWORD=""
 SET_OWN_SEED_PASSWORD=""
 USE_SEPARATE_REWARD=""
 START_SERVICES_AFTER_INSTALL=""
@@ -453,8 +453,8 @@ collect_user_inputs() {
     case $WALLET_SETUP_CHOICE in
         1)  # Create new wallet
             CREATE_WALLET_YES="yes"
-            read -p "Do you want to set your own wallet password? (y/n): " SET_OWN_PASSWORD
-            if [[ $SET_OWN_PASSWORD =~ ^[Yy]$ ]]; then
+            read -p "Do you want to set your own wallet password? (y/n): " SET_OWN_WALLET_PASSWORD
+            if [[ $SET_OWN_WALLET_PASSWORD =~ ^[Yy]$ ]]; then
                 while true; do
                     read -s -p "Enter your wallet password: " WALLET_PASSWORD
                     echo
@@ -469,6 +469,24 @@ collect_user_inputs() {
                 done
             else
                 WALLET_PASSWORD=$(pwgen -s 16 1)
+                echo "A secure random password has been generated for your wallet."
+            fi
+            read -p "Do you want to set your own seed password? (y/n): " SET_OWN_SEED_PASSWORD
+            if [[ $SET_OWN_SEED_PASSWORD =~ ^[Yy]$ ]]; then
+                while true; do
+                    read -s -p "Enter your seed password: " SEED_PASSWORD
+                    echo
+                    read -s -p "Confirm your seed password: " SEED_PASSWORD_CONFIRM
+                    echo
+                    
+                    if [ "$SEED_PASSWORD" = "$SEED_PASSWORD_CONFIRM" ]; then
+                        break
+                    else
+                        warn "Passwords do not match. Please try again."
+                    fi
+                done
+            else
+                SEED_PASSWORD=$(pwgen -s 16 1)
                 echo "A secure random password has been generated for your wallet."
             fi
             read -p "Enter a name for your wallet (e.g., myzanowallet): " WALLET_NAME
@@ -505,49 +523,46 @@ EOF
             read -p "Enter a name for your wallet (e.g., myzanowallet): " WALLET_NAME
             read -s -p "Enter wallet password: " WALLET_PASSWORD
             echo
+
+            # Verify the password is not empty
+            if [ -z "$WALLET_PASSWORD" ]; then
+                error "Password cannot be empty"
+            fi
+
+            read -s -p "Enter seed password (if any, or press Enter): " SEED_PASSWORD
+            echo
             echo "Paste your Zano seed phrase (all words in a single line, separated by spaces):"
             read -s SEED_WORDS
-            echo
-            
-            # Validate input
-            if [ -z "$WALLET_NAME" ] || [ -z "$WALLET_PASSWORD" ] || [ -z "$SEED_WORDS" ]; then
-                error "All fields are required"
-            fi
-            
-            # Create temporary file with secure permissions
-            TEMP_SEED_FILE=$(mktemp)
-            if [ $? -ne 0 ]; then
-                error "Failed to create temporary file"
-            fi
-            chmod 600 "$TEMP_SEED_FILE"
-            echo "$SEED_WORDS" > "$TEMP_SEED_FILE"
-            
-            # Clear the seed phrase from memory
-            SEED_WORDS=""
             
             # Start zanod for wallet restore
             start_zanod
             
+            # Create temporary files with secure permissions
+            TEMP_RESTORE_SCRIPT=$(mktemp)
+            chmod 600 "$TEMP_RESTORE_SCRIPT"
+            
+            # Prepare restore commands
+            cat > "$TEMP_RESTORE_SCRIPT" << EOF
+$SEED_WORDS
+$SEED_PASSWORD
+EOF
+            
             # Restore wallet from seed
-            ${ZANO_DIR}/simplewallet --restore-wallet="$ZANO_DIR/${WALLET_NAME}.wallet" \
-                                    --password="$WALLET_PASSWORD" < "$TEMP_SEED_FILE"
+            ${ZANO_DIR}/simplewallet --restore-wallet="${ZANO_DIR}/${WALLET_NAME}.wallet" \
+                                    --password="${WALLET_PASSWORD}" < "$TEMP_RESTORE_SCRIPT"
             
             if [ $? -ne 0 ]; then
-                shred -u "$TEMP_SEED_FILE"
+                shred -u "$TEMP_RESTORE_SCRIPT"
                 error "Failed to restore wallet"
             fi
             
-            # Get wallet address
-            WALLET_ADDRESS=$(${ZANO_DIR}/simplewallet --wallet-file="${ZANO_DIR}/${WALLET_NAME}.wallet" <<EOF
-${WALLET_PASSWORD}
-address
-exit
-EOF
-)
+            # Get wallet address just for display
+            WALLET_ADDRESS=$(${ZANO_DIR}/simplewallet --wallet-file="${ZANO_DIR}/${WALLET_NAME}.wallet" \
+                                                    --password="${WALLET_PASSWORD}" --command="address")
             WALLET_ADDRESS=$(echo "$WALLET_ADDRESS" | grep -oP 'Zx[a-zA-Z0-9]+' | head -n 1)
             
             if [ -z "$WALLET_ADDRESS" ]; then
-                shred -u "$TEMP_SEED_FILE"
+                shred -u "$TEMP_RESTORE_SCRIPT"
                 error "Failed to extract wallet address"
             fi
             
@@ -555,11 +570,7 @@ EOF
             echo -e "${BLUE}Wallet Address: ${WALLET_ADDRESS}${NC}"
             
             # Secure cleanup
-            shred -u "$TEMP_SEED_FILE"
-            
-            # Clear sensitive variables
-            WALLET_PASSWORD=""
-            
+            shred -u "$TEMP_RESTORE_SCRIPT"
             stop_zanod
             ;;
                     
