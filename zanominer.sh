@@ -772,25 +772,6 @@ handle_direct_command() {
         "stop-zanod")
             stop_zanod
             ;;
-        "pow")
-            install_dependencies
-            download_zano_components
-            setup_tt_miner
-            create_service_scripts
-            create_systemd_services
-            start_services
-            ;;
-        "pos")
-            if [ -z "$WALLET_NAME" ]; then
-                echo -e "${RED}No wallet selected. Please create or select a wallet first.${NC}"
-                exit 1
-            fi
-            install_dependencies
-            download_zano_components
-            create_service_scripts
-            create_systemd_services
-            start_services
-            ;;
         "status")
             clear
             echo -e "${BLUE}═══ Zano Status ═══${NC}"
@@ -845,25 +826,36 @@ show_help() {
     echo -e "Usage: zanominer [COMMAND]"
     echo
     echo "Commands:"
-    echo -e "${GREEN}  create-wallet${NC}  - Create a new Zano wallet"
-    echo -e "${GREEN}  start-zanod${NC}    - Start Zano daemon"
-    echo -e "${GREEN}  stop-zanod${NC}     - Stop Zano daemon"
-    echo -e "${GREEN}  pow${NC}            - Start Proof of Work mining"
-    echo -e "${GREEN}  pos${NC}            - Start Proof of Stake mining"
     echo -e "${GREEN}  status${NC}         - Show status of all components"
     echo -e "${GREEN}  install${NC}        - Install script system-wide"
     echo -e "${GREEN}  uninstall${NC}      - Remove script and clean up"
     echo -e "${GREEN}  build${NC}          - Full installation and setup"
+    echo -e "${GREEN}  start${NC}          - Start all Zano services"
+    echo -e "${GREEN}  stop${NC}           - Stop all Zano services"
+    echo -e "${GREEN}  restart${NC}        - Restart all Zano services"
+    echo -e "${GREEN}  logs${NC}           - View service logs"
+    echo -e "${GREEN}  delete-logs${NC}    - Delete service logs"
+    echo -e "${GREEN}  create-wallet${NC}  - Create a new Zano wallet"
+    echo -e "${GREEN}  start-zanod${NC}    - Start Zano daemon"
+    echo -e "${GREEN}  stop-zanod${NC}     - Stop Zano daemon"
     echo -e "${GREEN}  help${NC}           - Show this help message"
     echo
     echo "Interactive Mode:"
-    echo "Run without arguments to enter interactive menu mode"
+    echo "Run without arguments to enter interactive menu mode with options:"
+    echo "1) Start mining and staking"
+    echo "2) Show status of services"
+    echo "3) Start the services"
+    echo "4) Stop the services"
+    echo "5) Restart the services"
+    echo "6) Show Logs"
+    echo "7) Delete Logs"
+    echo "8) Exit"
     echo
     echo "Examples:"
     echo "  zanominer               # Enter interactive mode"
     echo "  zanominer create-wallet # Create a new wallet"
-    echo "  zanominer pow          # Start PoW mining"
-    echo "  zanominer build        # Full installation"
+    echo "  zanominer build         # Full installation"
+    echo "  zanominer start         # Start all services"
     echo
     echo "Requirements:"
     echo "- Ubuntu Desktop"
