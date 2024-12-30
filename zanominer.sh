@@ -443,36 +443,77 @@ collect_user_inputs() {
     echo -e "${BLUE}===== User Configuration =====${NC}"
     echo "This section will collect necessary information for your Zano setup."
 
-    read -p "Do you want to create a new wallet wallet? (y/n): " CREATE_WALLET_YES
-    if [[ $CREATE_WALLET_YES =~ ^[Yy]$ ]]; then
-        CREATE_WALLET_YES="yes"
+    # Wallet setup options
+    echo -e "\nWallet Setup Options:"
+    echo "1) Create new wallet"
+    echo "2) Import wallet from file"
+    echo "3) Import wallet from seed phrase"
+    read -p "Choose wallet setup method (1-3): " WALLET_SETUP_CHOICE
 
-        read -p "Do you want to set your own wallet password? (y/n): " SET_OWN_PASSWORD
-        if [[ $SET_OWN_PASSWORD =~ ^[Yy]$ ]]; then
-            while true; do
-                read -s -p "Enter your wallet password: " WALLET_PASSWORD
-                echo
-                read -s -p "Confirm your wallet password: " WALLET_PASSWORD_CONFIRM
-                echo
-                
-                if [ "$WALLET_PASSWORD" = "$WALLET_PASSWORD_CONFIRM" ]; then
-                    break
-                else
-                    warn "Passwords do not match. Please try again."
-                fi
+    case $WALLET_SETUP_CHOICE in
+        1)  # Create new wallet
+            CREATE_WALLET_YES="yes"
+            read -p "Do you want to set your own wallet password? (y/n): " SET_OWN_PASSWORD
+            if [[ $SET_OWN_PASSWORD =~ ^[Yy]$ ]]; then
+                while true; do
+                    read -s -p "Enter your wallet password: " WALLET_PASSWORD
+                    echo
+                    read -s -p "Confirm your wallet password: " WALLET_PASSWORD_CONFIRM
+                    echo
+                    
+                    if [ "$WALLET_PASSWORD" = "$WALLET_PASSWORD_CONFIRM" ]; then
+                        break
+                    else
+                        warn "Passwords do not match. Please try again."
+                    fi
+                done
+            else
+                WALLET_PASSWORD=$(pwgen -s 16 1)
+                echo "A secure random password has been generated for your wallet."
+            fi
+            read -p "Enter a name for your wallet (e.g., myzanowallet): " WALLET_NAME
+            ;;
+            
+        2)  # Import wallet from file
+            read -p "Enter the path to your wallet file: " WALLET_FILE_PATH
+            if [ ! -f "$WALLET_FILE_PATH" ]; then
+                error "Wallet file not found: $WALLET_FILE_PATH"
+            fi
+            read -s -p "Enter wallet password: " WALLET_PASSWORD
+            echo
+            WALLET_NAME=$(basename "$WALLET_FILE_PATH" .wallet)
+            mkdir -p "$ZANO_DIR"
+            cp "$WALLET_FILE_PATH" "$ZANO_DIR/${WALLET_NAME}.wallet"
+            ;;
+            
+        3)  # Import wallet from seed phrase
+            read -p "Enter a name for your wallet (e.g., myzanowallet): " WALLET_NAME
+            read -s -p "Enter wallet password: " WALLET_PASSWORD
+            echo
+            echo "Enter your 24-word seed phrase (press Enter after each word):"
+            SEED_WORDS=""
+            for i in {1..24}; do
+                read -p "Word $i: " word
+                SEED_WORDS="$SEED_WORDS $word"
             done
-        else
-            WALLET_PASSWORD=$(pwgen -s 16 1)
-            echo "A secure random password has been generated for your wallet."
-        fi
+            
+            # Create temporary file with seed phrase
+            TEMP_SEED_FILE=$(mktemp)
+            echo "$SEED_WORDS" > "$TEMP_SEED_FILE"
+            
+            # Restore wallet from seed
+            ${ZANO_DIR}/simplewallet --restore-wallet="$ZANO_DIR/${WALLET_NAME}.wallet" --password="$WALLET_PASSWORD" < "$TEMP_SEED_FILE"
+            
+            # Clean up
+            rm "$TEMP_SEED_FILE"
+            ;;
+            
+        *)
+            error "Invalid choice"
+            ;;
+    esac
 
-    else 
-        read -p "What is your wallet address?: " WALLET_ADDRESS
-        read -p "What is your wallet password?: " WALLET_PASSWORD
-    fi
-
-    read -p "Enter a name for your wallet (e.g., myzanowallet): " WALLET_NAME
-
+    # Common configuration for all setup methods
     read -p "Do you want to use pool mining? (y/n): " USE_POOL_MINING
     if [[ $USE_POOL_MINING =~ ^[Yy]$ ]]; then
         read -p "Enter worker name for pool mining: " POOL_WORKER_NAME
@@ -573,7 +614,7 @@ show_logs() {
     done
 
     # Get user selection
-    read -p "Select a log file to view (0-${#log_files[@]}): " log_selection
+    read -p "Select a log file to view (0-$((${#log_files[@]}-1))): " log_selection
 
     # Validate selection
     if ! [[ "$log_selection" =~ ^[0-9]+$ ]] || [ "$log_selection" -lt 0 ] || [ "$log_selection" -ge "${#log_files[@]}" ]; then
