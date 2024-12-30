@@ -484,33 +484,88 @@ collect_user_inputs() {
             WALLET_NAME=$(basename "$WALLET_FILE_PATH" .wallet)
             mkdir -p "$ZANO_DIR"
             cp "$WALLET_FILE_PATH" "$ZANO_DIR/${WALLET_NAME}.wallet"
+
+            # Start zanod and get wallet address
+            start_zanod
+            WALLET_ADDRESS=$(${ZANO_DIR}/simplewallet --wallet-file=${WALLET_NAME}.wallet <<EOF
+${WALLET_PASSWORD}
+address
+exit
+EOF
+)
+            WALLET_ADDRESS=$(echo "$WALLET_ADDRESS" | grep -oP 'Zx[a-zA-Z0-9]+' | head -n 1)
+            if [ -z "$WALLET_ADDRESS" ]; then
+                error "Failed to extract wallet address"
+            fi
+            echo -e "${BLUE}Wallet Address: ${WALLET_ADDRESS}${NC}"
+            stop_zanod
             ;;
             
         3)  # Import wallet from seed phrase
             read -p "Enter a name for your wallet (e.g., myzanowallet): " WALLET_NAME
             read -s -p "Enter wallet password: " WALLET_PASSWORD
             echo
-            echo "Enter your 24-word seed phrase (press Enter after each word):"
-            SEED_WORDS=""
-            for i in {1..24}; do
-                read -p "Word $i: " word
-                SEED_WORDS="$SEED_WORDS $word"
-            done
+            echo "Paste your Zano seed phrase (all words in a single line, separated by spaces):"
+            read -s SEED_WORDS
+            echo
             
-            # Create temporary file with seed phrase
+            # Validate input
+            if [ -z "$WALLET_NAME" ] || [ -z "$WALLET_PASSWORD" ] || [ -z "$SEED_WORDS" ]; then
+                error "All fields are required"
+            fi
+            
+            # Create temporary file with secure permissions
             TEMP_SEED_FILE=$(mktemp)
+            if [ $? -ne 0 ]; then
+                error "Failed to create temporary file"
+            fi
+            chmod 600 "$TEMP_SEED_FILE"
             echo "$SEED_WORDS" > "$TEMP_SEED_FILE"
             
+            # Clear the seed phrase from memory
+            SEED_WORDS=""
+            
+            # Start zanod for wallet restore
+            start_zanod
+            
             # Restore wallet from seed
-            ${ZANO_DIR}/simplewallet --restore-wallet="$ZANO_DIR/${WALLET_NAME}.wallet" --password="$WALLET_PASSWORD" < "$TEMP_SEED_FILE"
+            ${ZANO_DIR}/simplewallet --restore-wallet="$ZANO_DIR/${WALLET_NAME}.wallet" \
+                                    --password="$WALLET_PASSWORD" < "$TEMP_SEED_FILE"
             
-            # Clean up
-            rm "$TEMP_SEED_FILE"
-            ;;
+            if [ $? -ne 0 ]; then
+                shred -u "$TEMP_SEED_FILE"
+                error "Failed to restore wallet"
+            fi
             
-        *)
-            error "Invalid choice"
+            # Get wallet address
+            WALLET_ADDRESS=$(${ZANO_DIR}/simplewallet --wallet-file="${ZANO_DIR}/${WALLET_NAME}.wallet" <<EOF
+${WALLET_PASSWORD}
+address
+exit
+EOF
+)
+            WALLET_ADDRESS=$(echo "$WALLET_ADDRESS" | grep -oP 'Zx[a-zA-Z0-9]+' | head -n 1)
+            
+            if [ -z "$WALLET_ADDRESS" ]; then
+                shred -u "$TEMP_SEED_FILE"
+                error "Failed to extract wallet address"
+            fi
+            
+            echo -e "\n${GREEN}Wallet successfully imported!${NC}"
+            echo -e "${BLUE}Wallet Address: ${WALLET_ADDRESS}${NC}"
+            
+            # Secure cleanup
+            shred -u "$TEMP_SEED_FILE"
+            
+            # Clear sensitive variables
+            WALLET_PASSWORD=""
+            
+            stop_zanod
             ;;
+                    
+                *)
+                    error "Invalid choice"
+                    ;;
     esac
 
     # Common configuration for all setup methods
@@ -520,6 +575,14 @@ collect_user_inputs() {
     fi
 
     read -p "Would you like to start the services after installation? (y/n): " START_SERVICES_AFTER_INSTALL
+
+    # Save wallet information
+    if [ ! -f "$ZANO_DIR/wallet-details.txt" ]; then
+        echo "Wallet Name: ${WALLET_NAME}" > "$ZANO_DIR/wallet-details.txt"
+        echo "Wallet Address: ${WALLET_ADDRESS}" >> "$ZANO_DIR/wallet-details.txt"
+        echo "Wallet Password: ${WALLET_PASSWORD}" >> "$ZANO_DIR/wallet-details.txt"
+        chmod 600 "$ZANO_DIR/wallet-details.txt"
+    fi
 
     echo -e "${GREEN}Configuration completed successfully${NC}"
 }
