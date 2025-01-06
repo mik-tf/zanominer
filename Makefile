@@ -1,9 +1,13 @@
+# Get the script name dynamically based on sole script in repo
+SCRIPT_NAME := $(wildcard *.sh)
+INSTALL_NAME := $(basename $(SCRIPT_NAME))
+
 build:
-	bash zanominer.sh install
+	bash $(SCRIPT_NAME) install
 
 rebuild:
-	zanominer uninstall
-	bash zanominer.sh install
+	$(INSTALL_NAME) uninstall
+	bash $(SCRIPT_NAME) install
 	
 delete:
-	zanominer uninstall
+	$(INSTALL_NAME) uninstall
